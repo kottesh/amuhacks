@@ -74,7 +74,7 @@ async def parse_transaction_nlp(text: str, currency: str = "INR") -> List[NlpPar
 
             response_data = response.json()
             logger.debug(f"Ollama raw response data: {response_data}")
-            json_string = response_data.get("response", "[]")  # Get response, default to []
+            json_string = response_data.get("response", "[]")
 
             if json_string.startswith("```json"):
                 json_string = json_string[7:]
@@ -96,7 +96,7 @@ async def parse_transaction_nlp(text: str, currency: str = "INR") -> List[NlpPar
                 elif isinstance(parsed_data, list):
                     parsed_data_list = parsed_data
                 else:
-                    parsed_data_list = [parsed_data]  # Ensure we're always working with a list
+                    parsed_data_list = [parsed_data]
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON response from Ollama: {e}", exc_info=True)
                 logger.error(f"Raw response string causing error: {json_string}")
