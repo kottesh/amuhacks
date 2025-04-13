@@ -19,19 +19,30 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         Create a new transaction, link to owner, and update account balance atomically.
         """
 
-        from fastapi.encoders import jsonable_encoder
-        obj_in_data = jsonable_encoder(obj_in)
-
         amount_change = obj_in.amount if obj_in.type == TransactionType.INCOME else -obj_in.amount
-        updated_account = await crud_account.update_balance(db=db, account_id=obj_in.account_id, amount_change=amount_change)
+        updated_account = await crud_account.update_balance(
+            db=db,
+            account_id=obj_in.account_id,
+            amount_change=amount_change
+        )
 
         if not updated_account:
             raise ValueError(f"Account with id {obj_in.account_id} not found for balance update.")
 
-        # --- Create Transaction Record ---
-        db_obj = self.model(**obj_in_data, owner_id=owner_id)
+        # Create Transaction Record directly from the Pydantic model fields
+        db_obj = self.model(
+            amount=obj_in.amount,
+            type=obj_in.type,
+            category=obj_in.category,
+            date=obj_in.date,  # This will now be a proper `datetime.datetime` object
+            description=obj_in.description,
+            account_id=obj_in.account_id,
+            owner_id=owner_id
+        )
+
         db.add(db_obj)
         await db.flush()
+        await db.commit()
         await db.refresh(db_obj)
         return db_obj
 

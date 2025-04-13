@@ -31,7 +31,8 @@ if settings.BACKEND_CORS_ORIGINS:
     logger.info(f"Setting up CORS middleware for origins: {settings.BACKEND_CORS_ORIGINS}")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS], # Convert Pydantic URLs to strings
+        #allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS], # Convert Pydantic URLs to strings
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"], # Allow all standard methods
         allow_headers=["*"], # Allow all headers
