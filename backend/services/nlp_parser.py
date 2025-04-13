@@ -90,10 +90,13 @@ async def parse_transaction_nlp(text: str, currency: str = "INR") -> List[NlpPar
 
             try:
                 parsed_data = json.loads(json_string)
-                if not isinstance(parsed_data, list):
-                    parsed_data_list = [parsed_data]
-                else:
+                # Check if the response has a "transactions" key
+                if "transactions" in parsed_data and isinstance(parsed_data["transactions"], list):
+                    parsed_data_list = parsed_data["transactions"]
+                elif isinstance(parsed_data, list):
                     parsed_data_list = parsed_data
+                else:
+                    parsed_data_list = [parsed_data]  # Ensure we're always working with a list
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON response from Ollama: {e}", exc_info=True)
                 logger.error(f"Raw response string causing error: {json_string}")
