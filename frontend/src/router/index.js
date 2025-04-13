@@ -1,34 +1,47 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import LandingPage from '../views/LandingPage.vue'
-import LoginPage from '../views/LoginPage.vue'
-import RegisterPage from '../views/RegisterPage.vue'
-// Import your authenticated routes/layout as well
-// import DashboardLayout from '../layouts/DashboardLayout.vue'
-// import DashboardView from '../views/DashboardView.vue'
-import { useAuthStore } from '@/stores/authStore';
+import { createRouter, createWebHistory } from 'vue-router';
+import LandingPage from '../views/LandingPage.vue';
+import LoginPage from '../views/LoginPage.vue';
+import RegisterPage from '../views/RegisterPage.vue';
+import Dashboard from '../views/Dashboard.vue'; // Ensure this path is correct
+import { useAuthStore } from '@/stores/authStore'; // Adjust path if needed
 
 const routes = [
-  { path: '/', name: 'Quid', component: LandingPage },
-  { path: '/login', name: 'Login', component: LoginPage, meta: { requiresGuest: true } },
-  { path: '/register', name: 'Register', component: RegisterPage, meta: { requiresGuest: true } },
-  // Example protected route:
-  // {
-  //   path: '/dashboard',
-  //   component: DashboardLayout, // Or directly the view
-  //   meta: { requiresAuth: true },
-  //   children: [
-  //     { path: '', name: 'Dashboard', component: DashboardView },
-  //     // other authenticated routes
-  //   ]
-  // },
-  // Redirect root path or add a 404 page
-   { path: '/:pathMatch(.*)*', redirect: '/' }
-]
+  // Public routes
+  {
+    path: '/',
+    name: 'Landing', 
+    component: LandingPage,
+    meta: { requiresGuest: true } 
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: LoginPage,
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: RegisterPage,
+    meta: { requiresGuest: true }
+   },
+  {
+    path: '/dashboard',
+    name: 'Dashboard', 
+    component: Dashboard,
+    meta: { requiresAuth: true }
+  },
+
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
+];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
-})
+});
 
 router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
@@ -36,16 +49,14 @@ router.beforeEach((to, from, next) => {
     const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
 
     if (requiresAuth && !authStore.isAuthenticated) {
-        // Redirect to login if trying to access protected route without auth
         next({ name: 'Login', query: { redirect: to.fullPath } });
     } else if (requiresGuest && authStore.isAuthenticated) {
-        // Redirect to dashboard if trying to access login/register page while authenticated
-        next('/dashboard');
+        next({ name: 'Dashboard' });
     } else {
         next();
     }
 });
 
 
-export default router
+export default router;
 
