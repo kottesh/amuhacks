@@ -18,6 +18,12 @@ We know there are number of expense or budgeting apps in the market. But most of
 
 In which you just tell what are the expense which you have made. Quid will automatically categorize it and store it for you and provides you with analytics.
 
+**Tech used:**  
+
+Frontend: Vue JS, Pinia, TailwindCSS  
+Backend: FastAPI, Postgresql, Pydantic, SQLAlchemy  
+LLM: Granite3.2  
+
 ## Prototype Pics
 
 #### Auth
@@ -47,12 +53,13 @@ In which you just tell what are the expense which you have made. Quid will autom
 
 ### Confirming Transactions
 
-In this we could edit the fields if needed as well.
+In this we could edit the fields if needed as well.  
 
 ![confirmation](https://github.com/user-attachments/assets/cbb92efb-e901-4cfe-b5ee-1f7b846a4c35)
 
-After verifying the transactions and selecting the account. Just click the `tick` to store the transaction and `x` to discard the transaction.
+After verifying the transactions and selecting the account. Just click the `tick` to store the transaction and `x` to discard the transaction.  
 
-Finally, dashboard displays you with the categorized transactions and analytics.
+Finally, dashboard displays you with the categorized transactions and analytics.  
 
 ![after commpleting the entries](https://github.com/user-attachments/assets/a1706210-ae74-4591-a216-2956de6dba44)
+
