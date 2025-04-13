@@ -39,6 +39,8 @@ class Transaction(TransactionBase):
     id: int
     type: TransactionType
     owner_id: int
+    created_at: datetime
+    updated_at: datetime
 
 class NlpInput(BaseModel):
     """Schema for the input text for NLP parsing."""
@@ -53,7 +55,7 @@ class NlpParsedTransaction(BaseModel):
     category: str | None = None
     type: TransactionType
     description: str | None = None
-    date: datetime | None = None
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) 
 
     @validator('category', pre=True, always=True)
     def set_default_category(cls, v, values):

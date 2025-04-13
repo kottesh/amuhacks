@@ -3,6 +3,8 @@ from typing import Optional
 
 class UserBase(BaseModel):
     """Base user schema with common fields."""
+    first_name: str
+    last_name: str | None
     email: EmailStr = Field(..., description="User's unique email address")
     is_active: bool | None = True
 
@@ -16,6 +18,8 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     """Schema used when updating an existing user (optional fields)."""
+    first_name: str | None = None
+    last_name: str | None = None
     email: EmailStr | None = None
     password: str | None = None
     is_active: bool | None = None

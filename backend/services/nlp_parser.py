@@ -23,7 +23,7 @@ Each transaction object should contain:
 - "type": (string, required, must be exactly "INCOME" or "EXPENSE") The type of transaction.
 - "category": (string, optional) A relevant category (e.g., "Groceries", "Salary", "Dining", "Transport", "Utilities", "Shopping", "Travel", "Entertainment", "Gift", "Freelance", "Rent/Mortgage", "Healthcare", "Education", "Investment", "Other Income", "Other Expense"). If unsure, use "Other Expense" or "Other Income".
 - "description": (string, optional) A brief description or merchant name if identifiable.
-- "date": (string, optional, format=%Y-%m-%d) The date of the transaction if mentioned, otherwise omit.
+- "date": (string, format=%Y-%m-%d) The date of the transaction if mentioned, otherwise use current the date.
 
 Rules:
 - Infer the 'type' based on keywords (e.g., "spent", "paid", "bought" -> EXPENSE; "received", "got", "salary" -> INCOME).
