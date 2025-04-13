@@ -1,149 +1,299 @@
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { apiClient } from '@/stores/authStore'; // Adjust path if needed
+import { defineStore } from 'pinia'
+import { ref, reactive } from 'vue'
+import { apiClient } from '@/stores/authStore' // Adjust path as needed
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+
+dayjs.extend(utc)
 
 export const useDataStore = defineStore('data', () => {
-  // --- State ---
-  const accounts = ref([]);
-  const recentTransactions = ref([]);
-  const isLoading = ref(false);
-  const error = ref(null);
+  const accounts = ref([])
+  const recentTransactions = ref([]) // Used for the main transaction list
+  const chartTransactions = ref([]) // Holds transactions for the last 7 days chart
+  const parsedTransactions = ref([]) // Holds results from /parse endpoint
 
-  // --- Actions ---
+  const isLoading = ref(false) // General loading (primarily for initial load & accounts)
+  const isLoadingChart = ref(false) // Specific loading for chart data
+  const isLoadingParse = ref(false) // Specific loading for NLP parsing
 
-  // Fetch all accounts for the user
+  const error = ref(null) // General error state
+
   async function fetchAccounts() {
-    console.log("Attempting to fetch accounts..."); // Log start
+    console.log('Attempting to fetch accounts...')
+    isLoading.value = true // Use general loading for account fetch
+    error.value = null
     try {
-      // Use the correctly imported apiClient
-      const response = await apiClient.get('/accounts/'); // GET /api/v1/accounts/
-      console.log("API Response for /accounts/:", response); // Log raw response
-      // Ensure response.data is an array before assigning
+      const response = await apiClient.get('/accounts/')
+      console.log('API Response for /accounts/:', response)
       if (Array.isArray(response.data)) {
-          accounts.value = response.data;
-          console.log("Accounts state updated in store:", accounts.value); // Log updated state
+        accounts.value = response.data
+        console.log('Accounts state updated in store:', accounts.value)
       } else {
-          console.warn("/accounts/ endpoint did not return an array. Data:", response.data);
-          accounts.value = []; // Reset to empty array if data format is wrong
-          error.value = "Received invalid data format for accounts."; // Set specific error
+        console.warn('/accounts/ endpoint did not return an array. Data:', response.data)
+        accounts.value = []
+        error.value = 'Received invalid data format for accounts.'
       }
     } catch (err) {
-      console.error('Failed to fetch accounts (dataStore):', err);
-      const detail = err.response?.data?.detail;
-      error.value = typeof detail === 'object' ? JSON.stringify(detail) : (detail || err.message || 'Failed to fetch accounts');
-      accounts.value = [];
-      throw err; // Re-throw error so Promise.all can catch it
+      console.error('Failed to fetch accounts (dataStore):', err)
+      const detail = err.response?.data?.detail
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to fetch accounts'
+      accounts.value = []
+    } finally {
+      isLoading.value = false // Turn off general loading
     }
   }
 
-  // Fetch the most recent transactions
   async function fetchRecentTransactions(limit = 30) {
-    console.log("Attempting to fetch recent transactions...");
+    console.log('Attempting to fetch recent transactions...')
+    error.value = null // Clear previous errors before fetch
     try {
-       // Use the correctly imported apiClient
-      const response = await apiClient.get('/transactions/', { params: { limit } }); // GET /api/v1/transactions/?limit=30
-       console.log("API Response for /transactions/ (recent):", response);
-       if (Array.isArray(response.data)) {
-           recentTransactions.value = response.data;
-           console.log("Recent transactions state updated:", recentTransactions.value);
-       } else {
-            console.warn("/transactions/ endpoint did not return an array for recent tx. Data:", response.data);
-            recentTransactions.value = [];
-            error.value = "Received invalid data format for recent transactions.";
-       }
-    } catch (err) {
-      console.error('Failed to fetch recent transactions (dataStore):', err);
-      const detail = err.response?.data?.detail;
-      error.value = typeof detail === 'object' ? JSON.stringify(detail) : (detail || err.message || 'Failed to fetch recent transactions');
-      recentTransactions.value = [];
-       throw err; // Re-throw error
-    }
-  }
-
-  // Fetch transactions for a specific period
-  async function fetchTransactionsForPeriod(startDate, endDate) {
-     console.log(`Attempting to fetch transactions for period: ${startDate} to ${endDate}`);
-    try {
-       // Use the correctly imported apiClient
       const response = await apiClient.get('/transactions/', {
-        params: { start_date: startDate, end_date: endDate, limit: 1000 }
-      });
-       console.log("API Response for /transactions/ (period):", response);
-       if (Array.isArray(response.data)) {
-            return response.data; // Return the fetched data
-       } else {
-            console.warn("/transactions/ endpoint did not return an array for period tx. Data:", response.data);
-            error.value = "Received invalid data format for period transactions.";
-            return []; // Return empty array on format error
-       }
+        params: { limit, sort: '-transaction_date' },
+      })
+      console.log('API Response for /transactions/ (recent):', response)
+      if (Array.isArray(response.data)) {
+        //recentTransactions.value = response.data
+        recentTransactions.value = response.data
+        recentTransactions.value.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        console.log('Recent transactions state updated:', recentTransactions.value)
+      } else {
+        console.warn(
+          '/transactions/ endpoint did not return an array for recent tx. Data:',
+          response.data,
+        )
+        recentTransactions.value = []
+        error.value = 'Received invalid data format for recent transactions.'
+      }
     } catch (err) {
-      console.error('Failed to fetch transactions for period (dataStore):', err);
-      const detail = err.response?.data?.detail;
-      error.value = typeof detail === 'object' ? JSON.stringify(detail) : (detail || err.message || 'Failed to fetch transactions for period');
-       throw err; // Re-throw error
+      console.error('Failed to fetch recent transactions (dataStore):', err)
+      const detail = err.response?.data?.detail
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to fetch recent transactions'
+      recentTransactions.value = []
     }
   }
 
-  // Create a new account
-  async function createAccount(accountData) {
-      isLoading.value = true; error.value = null;
-      try {
-           // Use the correctly imported apiClient
-          const response = await apiClient.post('/accounts/', accountData);
-          await fetchAccounts(); // Re-fetch accounts after creation
-          return response.data;
-      } catch (err) {
-          console.error('Failed to create account (dataStore):', err);
-          const detail = err.response?.data?.detail;
-          error.value = typeof detail === 'object' ? JSON.stringify(detail) : (detail || err.message || 'Failed to create account');
-          throw err;
-      } finally { isLoading.value = false; }
+  async function fetchChartData() {
+    console.log('Attempting to fetch chart transactions...')
+    isLoadingChart.value = true
+    error.value = null
+    chartTransactions.value = []
+
+    const endDate = dayjs.utc().endOf('day').format('YYYY-MM-DD')
+    const startDate = dayjs.utc().subtract(6, 'day').startOf('day').format('YYYY-MM-DD')
+
+    try {
+      const response = await apiClient.get('/transactions/', {
+        params: { start_date: startDate, end_date: endDate, limit: 1000 },
+      })
+      console.log('API Response for /transactions/ (chart period):', response)
+      if (Array.isArray(response.data)) {
+        chartTransactions.value = response.data
+        console.log('Chart transactions state updated:', chartTransactions.value)
+      } else {
+        console.warn(
+          '/transactions/ endpoint did not return an array for chart tx. Data:',
+          response.data,
+        )
+        error.value = 'Received invalid data format for chart transactions.'
+      }
+    } catch (err) {
+      console.error('Failed to fetch chart transactions (dataStore):', err)
+      const detail = err.response?.data?.detail
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to fetch chart data'
+    } finally {
+      isLoadingChart.value = false
+    }
   }
 
-   // Create a new transaction
+  async function fetchInitialData() {
+    isLoading.value = true
+    error.value = null
+    console.log('Fetching initial dashboard data...')
+    try {
+      await Promise.all([fetchAccounts(), fetchRecentTransactions(), fetchChartData()])
+      console.log('Initial data fetch complete.')
+    } catch (err) {
+      // Errors are caught and handled within individual fetch functions,
+      // setting the main error state if needed. Promise.all might still reject
+      // if an error is re-thrown, but we handle errors internally.
+      console.error('Error during initial data fetch (Promise.all):', err)
+      if (!error.value) {
+        error.value = 'An error occurred while loading dashboard data.'
+      }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function addAccount(accountData) {
+    isLoading.value = true
+    error.value = null
+    let success = false
+    try {
+      const response = await apiClient.post('/accounts/', accountData)
+      await fetchAccounts() // Re-fetch accounts after successful creation
+      console.log('Account created successfully:', response.data)
+      success = true
+    } catch (err) {
+      console.error('Failed to create account (dataStore):', err)
+      const detail = err.response?.data?.detail
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to create account'
+      success = false
+    } finally {
+      isLoading.value = false
+    }
+    return success
+  }
+
+  async function parseTransactionsNLP(text) {
+    isLoadingParse.value = true
+    error.value = null
+    parsedTransactions.value = []
+    let success = false
+
+    try {
+      const response = await apiClient.post('/transactions/parse', { text })
+      console.log('API Response for /parse:', response)
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        console.log(response.data)
+        parsedTransactions.value = response.data.map((tx, index) => ({
+          ...tx,
+          date: tx.date ? tx.date.split('T')[0] : '',
+          tempId: Date.now() + index, // Unique temporary ID for v-for key
+          account_id: '', // Add account_id field, initially empty
+          isSaving: false, // Flag for individual save loading state
+          saveError: null, // Error message specific to this item's save attempt
+        }))
+        console.log('Parsed transactions updated:', parsedTransactions.value)
+        success = true
+      } else if (Array.isArray(response.data) && response.data.length === 0) {
+        console.log('NLP parsing returned an empty array.')
+        error.value = 'No transactions found in the text.' // More specific feedback
+        success = false
+      } else {
+        console.warn('/parse endpoint did not return an array. Data:', response.data)
+        error.value = 'Received invalid data format from parsing service.'
+        success = false
+      }
+    } catch (err) {
+      console.error('Failed to parse NLP transactions (dataStore):', err)
+      const detail = err.response?.data?.detail
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to parse transactions'
+      parsedTransactions.value = []
+      success = false
+    } finally {
+      isLoadingParse.value = false
+    }
+    return success
+  }
+
   async function createTransaction(transactionData) {
-       isLoading.value = true; error.value = null;
-       try {
-            // Use the correctly imported apiClient
-           const response = await apiClient.post('/transactions/', transactionData);
-           // Re-fetch recent transactions AND accounts after creation
-           await Promise.all([
-               fetchRecentTransactions(),
-               fetchAccounts()
-           ]);
-           return response.data;
-       } catch (err) {
-           console.error('Failed to create transaction (dataStore):', err);
-           const detail = err.response?.data?.detail;
-           error.value = typeof detail === 'object' ? JSON.stringify(detail) : (detail || err.message || 'Failed to create transaction');
-           throw err;
-       } finally { isLoading.value = false; }
-   }
+    error.value = null
+    let success = false
+    try {
+      const response = await apiClient.post('/transactions/', transactionData)
+      console.log('Transaction created successfully:', response.data)
+      await Promise.all([
+        fetchRecentTransactions(), // Update the list
+        fetchAccounts(), // Update account balances shown in cards/dropdowns
+        fetchChartData(), // Update chart data
+      ])
+      success = true
+    } catch (err) {
+      console.error('Failed to create transaction (dataStore):', err)
+      const detail = err.response?.data?.detail
+      // Set the general error state; the component reads this for the specific item
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to save transaction'
+      success = false
+    }
+    // No general isLoading management here
+    return success
+  }
 
-  // Action to clear data
+  // --- Actions for Managing Parsed Transactions UI State ---
+
+  /** Clears the list of parsed transactions. */
+  function clearParsedTransactions() {
+    parsedTransactions.value = []
+    console.log('Parsed transactions cleared.')
+  }
+
+  /** Removes a transaction from the parsed list by index. */
+  function removeParsedTransaction(index) {
+    if (index >= 0 && index < parsedTransactions.value.length) {
+      parsedTransactions.value.splice(index, 1)
+      console.log(`Removed parsed transaction at index ${index}.`)
+    }
+  }
+
+  /** Updates status flags (isSaving, saveError) on a specific parsed transaction. */
+  function setParsedTransactionStatus(index, { isSaving, saveError }) {
+    if (index >= 0 && index < parsedTransactions.value.length) {
+      const tx = parsedTransactions.value[index]
+      if (isSaving !== undefined) tx.isSaving = isSaving
+      if (saveError !== undefined) tx.saveError = saveError // Allows clearing error by passing null
+    }
+  }
+
+  /** Sets the formatted date string used by the date input for a specific parsed transaction. */
+  function setParsedTransactionDateFormatted(index, formattedDate) {
+    if (index >= 0 && index < parsedTransactions.value.length) {
+      parsedTransactions.value[index].transaction_date_formatted = formattedDate
+    }
+  }
+
+  /** Clears all local data (useful on logout). */
   function clearData() {
-      accounts.value = [];
-      recentTransactions.value = [];
-      error.value = null;
-      isLoading.value = false; // Ensure loading is reset
-      console.log("Data store cleared.");
-   }
+    accounts.value = []
+    recentTransactions.value = []
+    chartTransactions.value = []
+    parsedTransactions.value = []
+    error.value = null
+    isLoading.value = false
+    isLoadingChart.value = false
+    isLoadingParse.value = false
+    console.log('Data store cleared.')
+  }
 
-  // --- Return Store API ---
-  // Ensure all needed state and actions are returned
   return {
-    // State
     accounts,
     recentTransactions,
+    chartTransactions,
+    parsedTransactions,
     isLoading,
+    isLoadingChart,
+    isLoadingParse,
     error,
-    // Actions
+
     fetchAccounts,
     fetchRecentTransactions,
-    fetchTransactionsForPeriod,
-    createAccount,
+    fetchChartData,
+    fetchInitialData,
+    addAccount,
+    parseTransactionsNLP,
     createTransaction,
+    clearParsedTransactions,
+    removeParsedTransaction,
+    setParsedTransactionStatus,
+    setParsedTransactionDateFormatted,
     clearData,
-  };
-
-});
+  }
+})
