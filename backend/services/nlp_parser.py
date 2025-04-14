@@ -67,7 +67,7 @@ async def parse_transaction_nlp(text: str, currency: str = "INR") -> List[NlpPar
     json_string = "[]"
     try:
         logger.info(f"Sending text to Ollama for parsing. Model: {OLLAMA_MODEL}")
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
             response = await client.post(f"{OLLAMA_BASE_URL}api/generate", json=payload)
             logger.debug(f"Ollama raw response status: {response.status_code}")
             response.raise_for_status()
