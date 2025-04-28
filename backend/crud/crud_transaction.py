@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crud.base import CRUDBase
 from db.models import Transaction, Account
 from schemas.transaction import TransactionCreate, TransactionUpdate, TransactionType
-from .crud_account import account as crud_account 
+from .crud_account import account as crud_account
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta # Import timezone and timedelta
 
 class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate]):
     """CRUD operations for Transaction model."""
@@ -65,10 +65,22 @@ class CRUDTransaction(CRUDBase[Transaction, TransactionCreate, TransactionUpdate
         if account_id is not None:
             query = query.filter(Transaction.account_id == account_id)
         if start_date:
-            query = query.filter(Transaction.date >= start_date)
+            # Ensure start_date is timezone-aware (UTC) before comparison
+            aware_start_date = start_date
+            if start_date.tzinfo is None:
+                aware_start_date = start_date.replace(tzinfo=timezone.utc)
+            query = query.filter(Transaction.date >= aware_start_date)
+
         if end_date:
-            from datetime import timedelta
-            query = query.filter(Transaction.date < end_date + timedelta(days=1))
+            # Frontend sends 'YYYY-MM-DD' representing the end day. FastAPI likely parses this
+            # as YYYY-MM-DD 00:00:00. To include the entire end day, we filter
+            # for dates *before* the start of the *next* day.
+            end_bound_exclusive = end_date + timedelta(days=1)
+            # Ensure the calculated bound is timezone-aware (UTC)
+            if end_bound_exclusive.tzinfo is None:
+                 end_bound_exclusive = end_bound_exclusive.replace(tzinfo=timezone.utc)
+            query = query.filter(Transaction.date < end_bound_exclusive)
+
         if category:
             query = query.filter(Transaction.category.ilike(f"%{category}%")) # Case-insensitive search
         if transaction_type:
