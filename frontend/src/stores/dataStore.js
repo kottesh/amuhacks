@@ -89,7 +89,7 @@ export const useDataStore = defineStore('data', () => {
 
     try {
       const response = await apiClient.get('/transactions/', {
-        params: { start_date: startDate, end_date: endDate, limit: 1000 },
+        params: { start_date: startDate, end_date: endDate, limit: 1000 }, // <-- Uncommented this line
       })
       console.log('API Response for /transactions/ (chart period):', response)
       if (Array.isArray(response.data)) {
