@@ -9,6 +9,10 @@
         @logout="handleLogout"
       />
 
+      <router-link :to="{ name: 'Transactions' }" class="inline-block bg-primary-500 hover:bg-primary-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out mb-6">
+        View All Transactions
+      </router-link>
+
       <LoadingIndicator v-if="dataStore.isLoading && initialLoad" />
       <ErrorMessage
         v-else-if="dataStore.error && !showAddAccountModal && !showAddTransactionModal"
@@ -19,6 +23,7 @@
         <div class="lg:col-span-2 space-y-6">
           <AccountsSection />
           <SpendingIncomeChart />
+          <ExpenseIncomeRatioChart />
         </div>
 
         <div class="lg:col-span-1">
@@ -63,14 +68,15 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import DashboardHeader from '@/components/DashboardHeader.vue';
-import LoadingIndicator from '@/components/LoadingIndicator.vue';
-import ErrorMessage from '@/components/ErrorMessage.vue';
-import AccountsSection from '@/components/AccountsSection.vue';
-import SpendingIncomeChart from '@/components/SpendingIncomeChart.vue';
-import RecentTransactionsSection from '@/components/RecentTransactionsSection.vue';
-import AddAccountModal from '@/components/AddAccountModal.vue'; // Added import
-import AddTransactionModal from '@/components/AddTransactionModal.vue'; // Import the new modal
+import DashboardHeader from '@/components/DashboardHeader.vue'
+import LoadingIndicator from '@/components/LoadingIndicator.vue'
+import ErrorMessage from '@/components/ErrorMessage.vue'
+import AccountsSection from '@/components/AccountsSection.vue'
+import SpendingIncomeChart from '@/components/SpendingIncomeChart.vue'
+import ExpenseIncomeRatioChart from '@/components/ExpenseIncomeRatioChart.vue'; // Added import
+import RecentTransactionsSection from '@/components/RecentTransactionsSection.vue'
+import AddAccountModal from '@/components/AddAccountModal.vue' // Added import
+import AddTransactionModal from '@/components/AddTransactionModal.vue' // Import the new modal
 
 dayjs.extend(utc)
 dayjs.extend(relativeTime)
@@ -135,7 +141,8 @@ const openAddAccountModal = () => {
 const closeAddAccountModal = () => {
   showAddAccountModal.value = false
 }
-const handleAddAccountSubmit = async (accountData) => { // Updated to accept account data
+const handleAddAccountSubmit = async (accountData) => {
+  // Updated to accept account data
   modalError.value = ''
   // Basic validation - This should ideally be in the modal component
   // if (!newAccount.name || !newAccount.type) {
@@ -144,7 +151,7 @@ const handleAddAccountSubmit = async (accountData) => { // Updated to accept acc
   // }
   // Ensure balance is a number - This should ideally be in the modal component
   // newAccount.balance = Number(newAccount.balance) || 0
-  // Uppercase currency code - This should ideally be in the modal component
+  // Uppercase currency code - This should ideally be the modal component
   // newAccount.currency_code = (newAccount.currency_code || 'INR').toUpperCase()
 
   const success = await dataStore.addAccount(accountData) // Call Pinia store action with received data
@@ -218,7 +225,7 @@ onMounted(async () => {
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d1d5db; 
+  background: #d1d5db;
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {

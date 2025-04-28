@@ -9,9 +9,9 @@ const routes = [
   // Public routes
   {
     path: '/',
-    name: 'Landing', 
+    name: 'Landing',
     component: LandingPage,
-    meta: { requiresGuest: true } 
+    meta: { requiresGuest: true }
   },
   {
     path: '/login',
@@ -27,11 +27,16 @@ const routes = [
    },
   {
     path: '/dashboard',
-    name: 'Dashboard', 
+    name: 'Dashboard',
     component: Dashboard,
     meta: { requiresAuth: true }
   },
-
+  {
+    path: '/transactions',
+    name: 'Transactions',
+    component: () => import('../views/TransactionsView.vue'), // Lazy load the component
+    meta: { requiresAuth: true }
+  },
   {
     path: '/:pathMatch(.*)*',
     redirect: '/'
@@ -59,4 +64,3 @@ router.beforeEach((to, from, next) => {
 
 
 export default router;
-

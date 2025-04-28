@@ -3,12 +3,14 @@ import { ref, reactive } from 'vue'
 import { apiClient } from '@/stores/authStore' // Adjust path as needed
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
+import FilteredTransactions from '@/components/FilteredTransactions.vue'
 
 dayjs.extend(utc)
 
 export const useDataStore = defineStore('data', () => {
   const accounts = ref([])
   const recentTransactions = ref([]) // Used for the main transaction list
+  const filteredTransactions = ref([]) // Holds transactions for the filtered list
   const chartTransactions = ref([]) // Holds transactions for the last 7 days chart
   const parsedTransactions = ref([]) // Holds results from /parse endpoint
 
@@ -111,6 +113,39 @@ export const useDataStore = defineStore('data', () => {
           : detail || err.message || 'Failed to fetch chart data'
     } finally {
       isLoadingChart.value = false
+    }
+  }
+
+  async function fetchTransactionsByDateRange(startDate, endDate) {
+    console.log(`Attempting to fetch transactions between ${startDate} and ${endDate}...`);
+    isLoading.value = true; // Use general loading for this fetch
+    error.value = null;
+    filteredTransactions.value = []; // Clear previous results
+
+    try {
+      const response = await apiClient.get('/transactions/', {
+        params: { start_date: startDate, end_date: endDate, limit: 1000 },
+      });
+      console.log('API Response for /transactions/ (date range):', response);
+      if (Array.isArray(response.data)) {
+        filteredTransactions.value = response.data;
+        console.log('Filtered transactions state updated:', filteredTransactions.value);
+      } else {
+        console.warn(
+          '/transactions/ endpoint did not return an array for date range tx. Data:',
+          response.data,
+        );
+        error.value = 'Received invalid data format for filtered transactions.';
+      }
+    } catch (err) {
+      console.error('Failed to fetch transactions by date range (dataStore):', err);
+      const detail = err.response?.data?.detail;
+      error.value =
+        typeof detail === 'object'
+          ? JSON.stringify(detail)
+          : detail || err.message || 'Failed to fetch filtered transactions';
+    } finally {
+      isLoading.value = false; // Turn off general loading
     }
   }
 
@@ -260,10 +295,17 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
+  /** Clears the list of filtered transactions. */
+  function clearFilteredTransactions() {
+    filteredTransactions.value = [];
+    console.log('Filtered transactions cleared.');
+  }
+
   /** Clears all local data (useful on logout). */
   function clearData() {
     accounts.value = []
     recentTransactions.value = []
+    filteredTransactions.value = [] // Also clear filtered transactions
     chartTransactions.value = []
     parsedTransactions.value = []
     error.value = null
@@ -276,6 +318,7 @@ export const useDataStore = defineStore('data', () => {
   return {
     accounts,
     recentTransactions,
+    filteredTransactions, // Added filteredTransactions to the returned state
     chartTransactions,
     parsedTransactions,
     isLoading,
@@ -286,14 +329,16 @@ export const useDataStore = defineStore('data', () => {
     fetchAccounts,
     fetchRecentTransactions,
     fetchChartData,
+    fetchTransactionsByDateRange, // Added fetchTransactionsByDateRange to the returned actions
     fetchInitialData,
     addAccount,
     parseTransactionsNLP,
     createTransaction,
-    clearParsedTransactions,
+    clearParsedTransactions, // Added clearFilteredTransactions to the returned actions
     removeParsedTransaction,
     setParsedTransactionStatus,
     setParsedTransactionDateFormatted,
+    clearFilteredTransactions, // Added clearFilteredTransactions to the returned actions
     clearData,
   }
 })
